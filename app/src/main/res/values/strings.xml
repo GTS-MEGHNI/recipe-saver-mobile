@@ -1,6 +1,7 @@
 <resources>
     <string name="app_name">Mes Recettes</string>
 
+    <string name="categories_title">Catégories</string>
     <string name="recipe_list_title">Mes recettes</string>
     <string name="recipe_list_empty">Aucune recette pour l\'instant</string>
     <string name="add_recipe_title">Ajouter une recette</string>
@@ -8,17 +9,58 @@
     <string name="content_description_add_recipe">Ajouter une recette</string>
     <string name="content_description_back">Retour</string>
     <string name="content_description_delete_recipe">Supprimer la recette</string>
+    <string name="content_description_settings">Réglages</string>
+
+    <string name="settings_title">Réglages</string>
+    <string name="settings_theme_section">Thème</string>
+    <string name="theme_coral">Corail</string>
+    <string name="theme_sage">Sauge</string>
+    <string name="theme_neutral">Neutre</string>
+    <string name="content_description_theme_selected">Thème sélectionné</string>
+
+    <string name="settings_display_section">Affichage</string>
+    <string name="mode_system">Système</string>
+    <string name="mode_light">Clair</string>
+    <string name="mode_dark">Sombre</string>
+    <string name="content_description_recipe_image_placeholder">Photo de la recette non disponible</string>
 
     <string name="field_title">Titre</string>
     <string name="field_ingredients">Ingrédients</string>
     <string name="field_steps">Étapes</string>
     <string name="field_cook_time">Temps de cuisson (minutes)</string>
-    <string name="field_servings">Portions</string>
-    <string name="field_tags">Tags</string>
+    <string name="field_category">Catégorie</string>
+    <string name="hint_one_per_line">Un élément par ligne</string>
 
     <string name="action_save">Enregistrer</string>
     <string name="action_delete">Supprimer</string>
 
     <string name="label_cook_time_minutes">Temps de cuisson : %1$d min</string>
-    <string name="label_servings_count">Portions : %1$d</string>
+    <string name="label_cook_time_short">%1$d min</string>
+    <string name="label_category">Catégorie : %1$s</string>
+
+    <string name="category_drinks">Boisson</string>
+    <string name="category_food">Plat</string>
+    <string name="category_pastry">Pâtisserie</string>
+    <string name="category_verrine">Verrine</string>
+    <string name="category_cake">Gâteau</string>
+    <string name="category_confiture">Confiture</string>
+
+    <plurals name="label_recipe_count">
+        <item quantity="one">%1$d recette</item>
+        <item quantity="other">%1$d recettes</item>
+    </plurals>
+
+    <string name="section_ingredients">Ingrédients</string>
+    <string name="section_steps">Préparation</string>
+    <string name="label_ingredients_count">%1$d ingrédients</string>
+    <string name="label_steps_count">%1$d étapes</string>
+    <string name="label_step_number">Étape %1$d</string>
+
+    <string name="section_photos">Photos</string>
+    <string name="gallery_empty">Aucune photo pour l\'instant</string>
+    <string name="content_description_add_photos">Ajouter des photos</string>
+    <string name="content_description_delete_photo">Supprimer la photo</string>
+    <string name="content_description_close">Fermer</string>
+    <string name="label_photos_count">%1$d photos</string>
+    <string name="label_photo_position">%1$d sur %2$d</string>
 </resources>
