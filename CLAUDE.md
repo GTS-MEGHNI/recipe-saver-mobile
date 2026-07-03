@@ -4,7 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project status
 
-This is a fresh Android Studio "Empty Activity" template (package `com.example.myapplication`) that has not yet been built out. **`architecture.md` in the repo root is the design doc for the intended app ("Recipe Saver")** — read it before implementing features. It specifies the target architecture, package layout, data model, and a long list of concrete rules (below). Treat `architecture.md` as authoritative intent; treat the current source tree as the empty starting point.
+This is a fresh Android Studio "Empty Activity" template (package `com.recipesaver.app`) that has not yet been built out. **`architecture.md` in the repo root is the design doc for the intended app ("Recipe Saver")** — read it before implementing features. It specifies the target architecture, package layout, data model, and a long list of concrete rules (below). Treat `architecture.md` as authoritative intent; treat the current source tree as the empty starting point.
+
+**UI language: French only.** Every user-facing string is written in French — no English fallback, no `values-fr/` locale variants needed since French is the only supported locale for v1. Kotlin identifiers, composable names, and resource keys stay in English as normal; only the text users see is French.
 
 ## Commands
 
@@ -13,7 +15,7 @@ This is a fresh Android Studio "Empty Activity" template (package `com.example.m
 ./gradlew assembleDebug      # build debug APK
 ./gradlew test               # JVM unit tests (app/src/test)
 ./gradlew connectedAndroidTest # instrumented tests (app/src/androidTest), needs device/emulator
-./gradlew testDebugUnitTest --tests "com.example.myapplication.SomeTest"  # single unit test
+./gradlew testDebugUnitTest --tests "com.recipesaver.app.SomeTest"  # single unit test
 ./gradlew lint               # Android Lint
 ```
 

@@ -15,6 +15,7 @@ A local-only Android app for saving personal recipes, including text details and
 - Data must survive app **updates** (new APK installs) without loss.
 - Data does *not* need to survive app **uninstall** or be synced across devices (out of scope for v1).
 - Package name and signing key must stay constant across builds so Android treats new APKs as updates, not fresh installs.
+- **UI language is French only.** All user-facing strings (labels, buttons, screen titles, error/empty states) are written in French. This is a single-language app for v1 — no English fallback, no locale-based string resource variants (`values-fr/` etc.) are needed since French *is* the default and only locale. Code identifiers (Kotlin symbols, composable names, resource keys) stay in English per normal convention; only user-visible text is French.
 
 ---
 

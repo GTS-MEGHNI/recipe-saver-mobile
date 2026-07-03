@@ -1,4 +1,4 @@
-package com.example.myapplication
+package com.recipesaver.app
 
 import org.junit.Test
 
