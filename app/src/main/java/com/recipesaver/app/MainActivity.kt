@@ -7,6 +7,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -17,12 +18,13 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import com.recipesaver.app.data.files.ImageStorageManager
-import com.recipesaver.app.data.local.RecipeDatabase
-import com.recipesaver.app.data.preferences.ThemePreferences
 import com.recipesaver.app.data.local.entities.RecipeCategory
+import com.recipesaver.app.data.preferences.ThemePreferences
+import com.recipesaver.app.data.remote.ImageUploader
+import com.recipesaver.app.data.remote.NetworkModule
 import com.recipesaver.app.data.repository.RecipeRepository
 import com.recipesaver.app.ui.components.labelRes
+import com.recipesaver.app.ui.screens.AddRecipeScreen
 import com.recipesaver.app.ui.screens.CategoryScreen
 import com.recipesaver.app.ui.screens.RecipeDetailScreen
 import com.recipesaver.app.ui.screens.RecipeListScreen
@@ -35,8 +37,8 @@ class MainActivity : ComponentActivity() {
     private val viewModel: RecipeViewModel by viewModels {
         RecipeViewModel.Factory(
             RecipeRepository(
-                RecipeDatabase.getInstance(applicationContext).recipeDao(),
-                ImageStorageManager(applicationContext),
+                NetworkModule.createApiService(),
+                ImageUploader(applicationContext),
             ),
         )
     }
@@ -95,9 +97,25 @@ private fun RecipeSaverApp(
                 title = stringResource(category.labelRes),
                 recipes = filtered,
                 onRecipeClick = { id -> navController.navigate("detail/$id") },
-                // TODO: navigate to the add-recipe screen once it exists.
-                onAddClick = {},
+                onAddClick = { navController.navigate("add/${category.name}") },
                 onSettingsClick = { navController.navigate("settings") },
+                onBack = { navController.popBackStack() },
+            )
+        }
+        composable(
+            route = "add/{category}",
+            arguments = listOf(navArgument("category") { type = NavType.StringType }),
+        ) { backStackEntry ->
+            val initialCategory =
+                backStackEntry.arguments?.getString("category")?.let { name ->
+                    runCatching { RecipeCategory.valueOf(name) }.getOrNull()
+                }
+            AddRecipeScreen(
+                initialCategory = initialCategory,
+                onSave = { title, ingredients, steps, cookTimeMinutes, category ->
+                    viewModel.addRecipe(title, ingredients, steps, cookTimeMinutes, category)
+                    navController.popBackStack()
+                },
                 onBack = { navController.popBackStack() },
             )
         }
@@ -117,19 +135,41 @@ private fun RecipeSaverApp(
             arguments = listOf(navArgument("recipeId") { type = NavType.LongType }),
         ) { backStackEntry ->
             val recipeId = backStackEntry.arguments?.getLong("recipeId") ?: return@composable
-            // remember the flows so we don't build fresh StateFlows (and re-trigger their
-            // initial emission) on every recomposition, which loops forever.
-            val recipeFlow = remember(recipeId) { viewModel.getRecipe(recipeId) }
-            val imagesFlow = remember(recipeId) { viewModel.getImages(recipeId) }
-            val recipe by recipeFlow.collectAsState()
-            val images by imagesFlow.collectAsState()
+            LaunchedEffect(recipeId) { viewModel.openRecipe(recipeId) }
+            val recipe by viewModel.detail.collectAsState()
 
             recipe?.let { loaded ->
                 RecipeDetailScreen(
                     recipe = loaded,
-                    images = images,
+                    images = loaded.images,
                     onAddImages = { uris -> viewModel.addImages(recipeId, uris) },
-                    onDeleteImage = viewModel::deleteImage,
+                    onDeleteImage = { image -> viewModel.deleteImage(image.recipeId, image.id) },
+                    onSetCover = { uri -> viewModel.setCover(recipeId, uri) },
+                    onEdit = { navController.navigate("edit/$recipeId") },
+                    onDelete = {
+                        viewModel.deleteRecipe(loaded)
+                        navController.popBackStack()
+                    },
+                    onBack = { navController.popBackStack() },
+                )
+            }
+        }
+        composable(
+            route = "edit/{recipeId}",
+            arguments = listOf(navArgument("recipeId") { type = NavType.LongType }),
+        ) { backStackEntry ->
+            val recipeId = backStackEntry.arguments?.getLong("recipeId") ?: return@composable
+            LaunchedEffect(recipeId) { viewModel.openRecipe(recipeId) }
+            val recipe by viewModel.detail.collectAsState()
+
+            recipe?.takeIf { it.id == recipeId }?.let { loaded ->
+                AddRecipeScreen(
+                    initialCategory = loaded.category,
+                    existing = loaded,
+                    onSave = { title, ingredients, steps, cookTimeMinutes, category ->
+                        viewModel.updateRecipe(recipeId, title, ingredients, steps, cookTimeMinutes, category)
+                        navController.popBackStack()
+                    },
                     onBack = { navController.popBackStack() },
                 )
             }

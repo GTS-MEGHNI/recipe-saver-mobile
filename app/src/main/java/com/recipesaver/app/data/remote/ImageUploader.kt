@@ -1,66 +1,47 @@
-package com.recipesaver.app.data.files
+package com.recipesaver.app.data.remote
 
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Matrix
 import android.net.Uri
-import androidx.core.net.toUri
 import androidx.exifinterface.media.ExifInterface
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import java.io.File
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.MultipartBody
+import okhttp3.RequestBody.Companion.toRequestBody
+import java.io.ByteArrayOutputStream
 
 /**
- * Saves recipe gallery photos into the app's private internal storage
- * (`filesDir/recipe_images/`), which persists across app updates and is never cleared by the OS
- * (unlike `cacheDir`). Every image is downsampled to at most [MAX_EDGE] px on its longest edge and
- * re-encoded as JPEG before saving, so full-resolution camera photos never hit disk. Orientation
- * is baked in from the source EXIF, since re-encoding drops the metadata Coil would otherwise use.
+ * Turns a picked `content://` image into a multipart body part for upload. The image is downsampled
+ * to at most [MAX_EDGE] px on its longest edge, rotated upright from its EXIF orientation, and
+ * re-encoded as JPEG — so full-resolution camera photos aren't shipped over the network (the server
+ * also caps and optimizes, but shrinking client-side keeps uploads fast). Field name is `image`,
+ * matching the API's validation.
  */
-class ImageStorageManager(
+class ImageUploader(
     private val context: Context,
 ) {
-    private val imagesDir: File
-        get() = File(context.filesDir, IMAGES_DIR).apply { mkdirs() }
-
-    /**
-     * Copies [source] (a picker `content://` URI) into internal storage, downsampled and rotated
-     * upright. Returns a Coil-loadable `file://` URI string, or null if the image couldn't be read.
-     * [uniqueSuffix] disambiguates files saved in the same millisecond.
-     */
-    suspend fun saveImage(
-        source: Uri,
-        recipeId: Long,
-        uniqueSuffix: Int,
-    ): String? =
+    /** Builds the `image` multipart part, or null if [source] couldn't be decoded. */
+    suspend fun buildPart(source: Uri): MultipartBody.Part? =
         withContext(Dispatchers.IO) {
             val bitmap = decodeDownsampled(source) ?: return@withContext null
             val rotated = applyExifRotation(source, bitmap)
-            val file = File(imagesDir, "recipe_${recipeId}_${System.currentTimeMillis()}_$uniqueSuffix.jpg")
-            try {
-                file.outputStream().use { out ->
+            val bytes =
+                ByteArrayOutputStream().use { out ->
                     rotated.compress(Bitmap.CompressFormat.JPEG, JPEG_QUALITY, out)
+                    out.toByteArray()
                 }
-            } finally {
-                rotated.recycle()
-                if (rotated !== bitmap) bitmap.recycle()
-            }
-            file.toUri().toString()
+            rotated.recycle()
+            if (rotated !== bitmap) bitmap.recycle()
+
+            val body = bytes.toRequestBody("image/jpeg".toMediaType())
+            MultipartBody.Part.createFormData("image", "upload.jpg", body)
         }
 
-    /** Deletes the file backing a stored `file://` URI. No-op if it's already gone. */
-    fun deleteImage(fileUri: String) {
-        runCatching {
-            val file = fileUri.toUri().path?.let(::File) ?: return
-            if (file.exists()) file.delete()
-        }
-    }
-
-    /** Decodes [source] with an `inSampleSize` that keeps it at least [MAX_EDGE] px, then scales down. */
     private fun decodeDownsampled(source: Uri): Bitmap? {
-        val bounds =
-            BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
         context.contentResolver.openInputStream(source)?.use {
             BitmapFactory.decodeStream(it, null, bounds)
         }
@@ -131,7 +112,6 @@ class ImageStorageManager(
     }
 
     private companion object {
-        const val IMAGES_DIR = "recipe_images"
         const val MAX_EDGE = 1080
         const val JPEG_QUALITY = 85
     }
