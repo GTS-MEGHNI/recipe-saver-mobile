@@ -4,7 +4,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project status
 
-This is a fresh Android Studio "Empty Activity" template (package `com.recipesaver.app`) that has not yet been built out. **`architecture.md` in the repo root is the design doc for the intended app ("Recipe Saver")** — read it before implementing features. It specifies the target architecture, package layout, data model, and a long list of concrete rules (below). Treat `architecture.md` as authoritative intent; treat the current source tree as the empty starting point.
+This is the **Android app** (package `com.recipesaver.app`) for "Recipe Saver". **`architecture.md` in the repo root is the design doc for the intended app** — read it before implementing features.
+
+### Sibling `api/` project
+
+This repo (`recipes/mobile/`) has a sibling folder `recipes/api/` — the **owner-run HTTP backend** for the planned v2 API-backed model (see `architecture.md` §12). It is a **Laravel 12 / PHP 8.3** app (`laravel/recipes-api`) with its own `CLAUDE.md`; work on it from that directory, not this one. It already implements the §12.4 endpoint contract — `apiResource('recipes')` plus `recipes/{recipe}/cover` and nested `recipes.images` — authenticated by a single static key via an `api.key` middleware reading the `X-API-Key` header (env `RECIPE_API_KEY`, no accounts). The recipe shape mirrors this app's `Recipe` entity. The mobile app's `data/remote/` layer that consumes it is **not yet implemented**. It specifies the target architecture, package layout, data model, and a long list of concrete rules (below). Treat `architecture.md` as authoritative intent; treat the current source tree as the empty starting point.
 
 **UI language: French only.** Every user-facing string is written in French — no English fallback, no `values-fr/` locale variants needed since French is the only supported locale for v1. Kotlin identifiers, composable names, and resource keys stay in English as normal; only the text users see is French.
 
@@ -25,6 +29,17 @@ This is a fresh Android Studio "Empty Activity" template (package `com.recipesav
 ```
 
 ktlint **is** configured (`org.jlleitschuh.gradle.ktlint`); detekt is not.
+
+### Gradle configuration cache is disabled — keep it that way
+
+`gradle.properties` sets `org.gradle.configuration-cache=false`. It was previously `true` and was
+caught **serving stale outputs**: `assembleDebug`/`installDebug` reported `BUILD SUCCESSFUL` while
+packaging/installing an hour-old APK that did not contain freshly added sources (a new screen was
+missing from the dex, so a wired-up button silently did nothing). Builds must faithfully reflect the
+current source, so the cache stays **off**. Do not re-enable it. If you ever suspect a stale build,
+confirm the change is really in the APK — e.g.
+`unzip -p app/build/outputs/apk/debug/app-debug.apk 'classes*.dex' | strings -a | grep -o 'ui/screens/[A-Za-z]*' | sort -u`
+should list every screen you expect.
 
 ### Building an APK
 
@@ -63,6 +78,10 @@ Only build or install once both pass. This catches style and type errors cheaply
 ### Do not run the emulator
 
 **Never launch, boot, or manage the Android emulator** (`emulator -avd …`, starting an AVD, etc.) — the developer runs the emulator themselves. Claude's job ends at building and, when a device is **already connected** (`adb devices` shows one), `installDebug`. If no device is connected, stop and ask the developer to start their emulator rather than starting one.
+
+**After building, always check `adb devices` and install directly if one is connected.** When a build/change is done and a device shows up in `~/Android/Sdk/platform-tools/adb devices`, go straight to `installDebug` (which builds + installs) without waiting to be asked — but **never run auto tests to verify** (see the auto-test rule below). If no device is connected, report the build result and ask the developer to connect/start their emulator.
+
+**Device:** the developer's emulator is the AVD **`Pixel_6`** (SDK at `~/Android/Sdk`; `adb` lives in `~/Android/Sdk/platform-tools/`, `emulator` in `~/Android/Sdk/emulator/`). Launch with `~/Android/Sdk/emulator/emulator -avd Pixel_6` only when the developer explicitly asks; otherwise assume they start it themselves.
 
 **Do not auto-test on the emulator.** After `installDebug`, do **not** drive or verify the app on the device yourself — no `adb shell am start`, `adb shell input tap/text/swipe`, `adb exec-out screencap`, or logcat-based UI checking to confirm a change works. The developer does all interactive testing and screenshotting. Report what you built and let them run it. Only interact with the running app this way if the developer **explicitly** asks you to (e.g. "take a screenshot", "tap through it").
 
