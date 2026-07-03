@@ -306,3 +306,87 @@ Practices worth setting up early — cheap now, expensive to retrofit once the c
 6. Add multi-theme support (DataStore preference + Settings screen) — optional, can be done anytime after step 1.
 7. Set up release keystore + signing config before doing any "real" builds meant to persist across updates.
 8. Add lint/static analysis, basic unit tests, and LeakCanary — ideally woven in throughout rather than bolted on at the end.
+
+---
+
+## 12. Planned change (v2): API-backed data
+
+**Status: agreed direction, not yet implemented.** This section supersedes the "backend/API is out
+of scope" line in §8 and the "no backend" rationale behind some §6/§10 rules once the work lands.
+Below, *decided* items are settled; *open decisions* still need confirmation before coding.
+
+### 12.1 Motivation
+
+Local-only storage means a lost, damaged, or replaced phone loses every recipe. Moving the data
+behind an owner-run HTTP API makes the **server the durable home for the data**: any phone running
+the app pulls the same recipes down, so switching or replacing a device no longer loses anything.
+
+### 12.2 Decided
+
+- **The API is the source of truth.** All recipe data comes from the server, not from a local
+  database that happens to sync.
+- **Authentication is a single static `API_KEY`, not user accounts.** Every request carries the key
+  in an `X-API-Key` header over **HTTPS**. There is no login screen, no per-user auth.
+- **One key ⇒ one shared dataset.** Because every install uses the same key, every device sees the
+  same recipes. For this single-user personal app that is exactly what enables "new phone → same
+  data" without an accounts system.
+- **Layering is unchanged.** Only the data layer changes. Per §3, the `RecipeRepository` keeps the
+  same public interface, so `ui/screens/` and `ui/viewmodel/` are **not** touched. This is the whole
+  reason the Repository indirection exists.
+
+### 12.3 Proposed data-layer design
+
+```
+data/
+├── remote/
+│   ├── RecipeApiService.kt     (Retrofit interface — the endpoints below)
+│   ├── dto/                    (wire models: RecipeDto, etc.)
+│   └── ApiKeyInterceptor.kt    (OkHttp interceptor adding the X-API-Key header)
+├── repository/
+│   └── RecipeRepository.kt     (now talks to remote instead of Room)
+└── preferences/                (unchanged — theme/dark-mode still local via DataStore)
+```
+
+- **Stack:** Retrofit + OkHttp + kotlinx.serialization. Coil already loads image URLs from the
+  network, so remote image display needs no new image code.
+- **Key handling:** `API_KEY` is injected at build time via `BuildConfig` from `local.properties`
+  (kept out of git), **not** hardcoded in source. ⚠️ **Security caveat:** a key shipped inside an
+  APK can be extracted by anyone who unpacks it — acceptable for a personal sideloaded app, but the
+  server must treat this key as **low-trust** (rate-limit it, scope it to this data only; it is not
+  a secret that authenticates a specific human).
+
+### 12.4 Draft endpoint contract
+
+```
+GET    /recipes          → list of recipes
+GET    /recipes/{id}     → one recipe
+POST   /recipes          → create
+PUT    /recipes/{id}     → update
+DELETE /recipes/{id}     → delete
+```
+
+Full request/response JSON to be written once the open decisions below are settled. Recipe shape
+mirrors the current entity: title, ingredients[], steps[], cookTimeMinutes?, category?, images,
+createdAt.
+
+### 12.5 Open decisions (confirm before implementing)
+
+1. **CRUD vs read-only** — assume the app creates/edits/deletes recipes and those changes write to
+   the server (POST/PUT/DELETE). If instead the app only displays a server-managed catalog,
+   drop the write endpoints (much simpler).
+2. **Offline cache vs pure-online** — assume Room is kept as a thin read cache so the app opens and
+   shows the last fetch with no connection (writes hit the API, then update the cache). Alternative:
+   remove Room entirely and go pure-online (simpler, but a blank screen with no network).
+3. **Images over the API** — assume the server stores/serves image files and returns URLs, so the
+   local `ImageStorageManager`/internal-file machinery (§4.1) is retired. Alternative: keep images
+   local-only for now and back up text first.
+
+### 12.6 Rules that change once this lands
+
+- §8's "backend/API, multi-device data availability out of scope" no longer holds — it becomes the
+  core of v2.
+- If Room is dropped (open decision #2), the §6 migration rules and the §10 "no
+  `fallbackToDestructiveMigration()`" guardrail stop applying to recipe data (they'd only matter for
+  any remaining local cache, where a wipe is recoverable by re-fetching from the server).
+- The §6/§7 "package name + signing key must never change" rule **still holds** — it is about app
+  identity for updates, independent of where the data lives.
