@@ -1,9 +1,12 @@
 package com.recipesaver.app.ui.viewmodel
 
+import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.recipesaver.app.data.local.entities.Recipe
+import com.recipesaver.app.data.local.entities.RecipeCategory
+import com.recipesaver.app.data.local.entities.RecipeImage
 import com.recipesaver.app.data.repository.RecipeRepository
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -27,13 +30,32 @@ class RecipeViewModel(
             initialValue = null,
         )
 
+    fun getImages(recipeId: Long): StateFlow<List<RecipeImage>> =
+        repository.getImages(recipeId).stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5_000),
+            initialValue = emptyList(),
+        )
+
+    fun addImages(
+        recipeId: Long,
+        uris: List<Uri>,
+    ) {
+        viewModelScope.launch {
+            uris.forEachIndexed { index, uri -> repository.addImage(recipeId, uri, index) }
+        }
+    }
+
+    fun deleteImage(image: RecipeImage) {
+        viewModelScope.launch { repository.deleteImage(image) }
+    }
+
     fun addRecipe(
         title: String,
-        ingredients: String,
-        steps: String,
+        ingredients: List<String>,
+        steps: List<String>,
         cookTimeMinutes: Int?,
-        servings: Int?,
-        tags: String?,
+        category: RecipeCategory?,
     ) {
         viewModelScope.launch {
             repository.addRecipe(
@@ -42,8 +64,7 @@ class RecipeViewModel(
                     ingredients = ingredients,
                     steps = steps,
                     cookTimeMinutes = cookTimeMinutes,
-                    servings = servings,
-                    tags = tags,
+                    category = category,
                     createdAt = System.currentTimeMillis(),
                 ),
             )
