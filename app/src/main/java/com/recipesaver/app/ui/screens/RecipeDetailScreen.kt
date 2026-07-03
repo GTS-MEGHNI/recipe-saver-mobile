@@ -32,11 +32,14 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AddAPhoto
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -81,11 +84,16 @@ fun RecipeDetailScreen(
     images: List<RecipeImage>,
     onAddImages: (List<Uri>) -> Unit,
     onDeleteImage: (RecipeImage) -> Unit,
+    onSetCover: (Uri) -> Unit,
+    onEdit: () -> Unit,
+    onDelete: () -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     // Index of the photo shown full-screen, or null when the viewer is closed.
     var viewerIndex by remember { mutableStateOf<Int?>(null) }
+    // Whether the delete-confirmation dialog is showing.
+    var showDeleteDialog by remember { mutableStateOf(false) }
 
     val pickImages =
         rememberLauncherForActivityResult(
@@ -95,6 +103,18 @@ fun RecipeDetailScreen(
         }
     val launchPicker = {
         pickImages.launch(
+            PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly),
+        )
+    }
+
+    val pickCover =
+        rememberLauncherForActivityResult(
+            ActivityResultContracts.PickVisualMedia(),
+        ) { uri ->
+            if (uri != null) onSetCover(uri)
+        }
+    val launchCoverPicker = {
+        pickCover.launch(
             PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly),
         )
     }
@@ -165,14 +185,66 @@ fun RecipeDetailScreen(
             }
         }
 
-        // Floating back control over the hero, offset below the status bar.
-        ScrimIconButton(
-            icon = Icons.AutoMirrored.Filled.ArrowBack,
-            contentDescription = stringResource(R.string.content_description_back),
-            onClick = onBack,
+        // Floating controls over the hero, offset below the status bar: back on the left, a
+        // cover-photo picker on the right.
+        Row(
             modifier = Modifier
+                .fillMaxWidth()
                 .statusBarsPadding()
                 .padding(horizontal = 12.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            ScrimIconButton(
+                icon = Icons.AutoMirrored.Filled.ArrowBack,
+                contentDescription = stringResource(R.string.content_description_back),
+                onClick = onBack,
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                ScrimIconButton(
+                    icon = Icons.Filled.Edit,
+                    contentDescription = stringResource(R.string.content_description_edit_recipe),
+                    onClick = onEdit,
+                )
+                ScrimIconButton(
+                    icon = Icons.Filled.AddAPhoto,
+                    contentDescription = stringResource(R.string.content_description_set_cover),
+                    onClick = launchCoverPicker,
+                )
+                ScrimIconButton(
+                    icon = Icons.Filled.Delete,
+                    contentDescription = stringResource(R.string.content_description_delete_recipe),
+                    onClick = { showDeleteDialog = true },
+                )
+            }
+        }
+    }
+
+    if (showDeleteDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            icon = {
+                Icon(imageVector = Icons.Filled.Delete, contentDescription = null)
+            },
+            title = { Text(stringResource(R.string.delete_recipe_dialog_title)) },
+            text = { Text(stringResource(R.string.delete_recipe_dialog_message)) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showDeleteDialog = false
+                        onDelete()
+                    },
+                ) {
+                    Text(
+                        text = stringResource(R.string.action_delete),
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteDialog = false }) {
+                    Text(stringResource(R.string.action_cancel))
+                }
+            },
         )
     }
 
