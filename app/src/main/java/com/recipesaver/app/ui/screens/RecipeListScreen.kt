@@ -45,6 +45,7 @@ import coil3.compose.AsyncImage
 import com.recipesaver.app.R
 import com.recipesaver.app.data.local.entities.Recipe
 import com.recipesaver.app.ui.components.RecipeImagePlaceholder
+import com.recipesaver.app.ui.components.SadMuffin
 import com.recipesaver.app.ui.components.icon
 import com.recipesaver.app.ui.components.labelRes
 
@@ -92,13 +93,21 @@ fun RecipeListScreen(
         },
     ) { innerPadding ->
         if (recipes.isEmpty()) {
-            Box(
+            Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(innerPadding),
-                contentAlignment = Alignment.Center,
+                    .padding(innerPadding)
+                    .padding(32.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center,
             ) {
-                Text(stringResource(R.string.recipe_list_empty))
+                SadMuffin(size = 128.dp)
+                Text(
+                    text = stringResource(R.string.recipe_list_empty),
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 16.dp),
+                )
             }
         } else {
             LazyColumn(
