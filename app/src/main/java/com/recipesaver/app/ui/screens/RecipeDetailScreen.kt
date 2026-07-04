@@ -66,9 +66,13 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.PlatformTextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.LineHeightStyle
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import coil3.compose.AsyncImage
@@ -652,9 +656,23 @@ private fun StepRow(
         ) {
             Text(
                 text = number.toString(),
-                style = MaterialTheme.typography.titleMedium,
+                // Inter (the app's sans) rather than the serif titleMedium — a compact, even
+                // numeral with 0 letter-spacing that centres cleanly in the circle.
+                style = MaterialTheme.typography.bodyLarge.copy(
+                    fontSize = 16.sp,
+                    letterSpacing = 0.sp,
+                    // Tabular lining figures: every digit gets an identical, evenly-padded advance
+                    // width so 1/3/4 all centre the same way instead of drifting per glyph.
+                    fontFeatureSettings = "tnum, lnum",
+                    platformStyle = PlatformTextStyle(includeFontPadding = false),
+                    lineHeightStyle = LineHeightStyle(
+                        alignment = LineHeightStyle.Alignment.Center,
+                        trim = LineHeightStyle.Trim.Both,
+                    ),
+                ),
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onPrimary,
+                textAlign = TextAlign.Center,
             )
         }
         Text(
