@@ -17,6 +17,11 @@ object NetworkModule {
         Json {
             ignoreUnknownKeys = true
             explicitNulls = false
+            // Coerce a null (or unknown-enum) value to the property's default instead of throwing.
+            // The API can return `isFavorite: null` on a freshly-created recipe (the column default
+            // isn't reflected in the create response); without this, decoding that 201 body fails and
+            // a successful save is reported as an error.
+            coerceInputValues = true
         }
 
     fun createApiService(): RecipeApiService {

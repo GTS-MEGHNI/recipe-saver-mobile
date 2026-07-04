@@ -16,6 +16,7 @@ class DtoSerializationTest {
         Json {
             ignoreUnknownKeys = true
             explicitNulls = false
+            coerceInputValues = true
         }
 
     @Test
@@ -78,15 +79,22 @@ class DtoSerializationTest {
     }
 
     @Test
-    fun `decodes isFavorite and defaults it to false when absent`() {
+    fun `decodes isFavorite and defaults it to false when absent or null`() {
         val favorite =
             json.decodeFromString<ApiData<RecipeDto>>(
                 """{"data":{"id":1,"title":"X","isFavorite":true}}""",
             ).data
-        val plain = json.decodeFromString<ApiData<RecipeDto>>("""{"data":{"id":2,"title":"Y"}}""").data
+        val absent = json.decodeFromString<ApiData<RecipeDto>>("""{"data":{"id":2,"title":"Y"}}""").data
+        // The API returns isFavorite:null on a freshly-created recipe; it must coerce to false, not
+        // blow up decoding (which surfaced as a false "save failed" for every create).
+        val explicitNull =
+            json.decodeFromString<ApiData<RecipeDto>>(
+                """{"data":{"id":3,"title":"Z","isFavorite":null}}""",
+            ).data
 
         assertTrue(favorite.isFavorite)
-        assertFalse(plain.isFavorite)
+        assertFalse(absent.isFavorite)
+        assertFalse(explicitNull.isFavorite)
     }
 
     @Test
