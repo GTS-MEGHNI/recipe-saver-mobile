@@ -43,6 +43,14 @@ class RecipeViewModel(
     private val _errorMessage = MutableStateFlow<String?>(null)
     val errorMessage: StateFlow<String?> = _errorMessage.asStateFlow()
 
+    // Draft of the new-recipe form, retained across navigation so a half-filled recipe isn't lost
+    // when the user leaves the add screen and comes back. Cleared once a recipe is saved.
+    private val _draft = MutableStateFlow(RecipeDraft())
+    val draft: StateFlow<RecipeDraft> = _draft.asStateFlow()
+
+    // Guards against firing duplicate create requests when the save button is tapped repeatedly.
+    private var saveInProgress = false
+
     // One-shot outcomes for success/error toasts. Buffered + drop-oldest so emitting never suspends
     // even when no collector is attached (e.g. during a screen transition).
     private val _messages =
@@ -82,6 +90,11 @@ class RecipeViewModel(
 
     fun clearError() {
         _errorMessage.value = null
+    }
+
+    /** Records the latest new-recipe form state so it survives navigating away from the add screen. */
+    fun updateDraft(draft: RecipeDraft) {
+        _draft.value = draft
     }
 
     fun addImages(
@@ -141,14 +154,20 @@ class RecipeViewModel(
         category: RecipeCategory?,
         onCreated: (Long) -> Unit = {},
     ) {
+        // Ignore repeat taps while a create is already in flight, so an impatient double-tap can't
+        // post the same recipe several times.
+        if (saveInProgress) return
+        saveInProgress = true
         viewModelScope.launch {
             runCatching {
                 repository.addRecipe(title, ingredients, steps, cookTimeMinutes, category)
             }.onSuccess { created ->
+                _draft.value = RecipeDraft()
                 refresh()
                 _messages.tryEmit(RecipeMessage.RecipeSaved)
                 onCreated(created.id)
             }.onFailure { fail(it, RecipeMessage.SaveFailed) }
+            saveInProgress = false
         }
     }
 

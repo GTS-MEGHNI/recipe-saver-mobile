@@ -150,8 +150,11 @@ private fun RecipeSaverApp(
                 backStackEntry.arguments?.getString("category")?.let { name ->
                     runCatching { RecipeCategory.valueOf(name) }.getOrNull()
                 }
+            val draft by viewModel.draft.collectAsState()
             AddRecipeScreen(
                 initialCategory = initialCategory,
+                draft = draft,
+                onDraftChange = viewModel::updateDraft,
                 onSave = { title, ingredients, steps, cookTimeMinutes, category ->
                     viewModel.addRecipe(title, ingredients, steps, cookTimeMinutes, category) { newId ->
                         navController.navigate("detail/$newId") {

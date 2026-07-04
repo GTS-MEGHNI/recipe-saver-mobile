@@ -24,6 +24,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -37,6 +38,7 @@ import com.recipesaver.app.data.local.entities.Recipe
 import com.recipesaver.app.data.local.entities.RecipeCategory
 import com.recipesaver.app.ui.components.icon
 import com.recipesaver.app.ui.components.labelRes
+import com.recipesaver.app.ui.viewmodel.RecipeDraft
 
 /**
  * Form for creating or editing a recipe. Ingredients and steps are entered as free text, one item
@@ -62,12 +64,35 @@ fun AddRecipeScreen(
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
     existing: Recipe? = null,
+    draft: RecipeDraft = RecipeDraft(),
+    onDraftChange: (RecipeDraft) -> Unit = {},
 ) {
-    var title by remember { mutableStateOf(existing?.title.orEmpty()) }
-    var ingredients by remember { mutableStateOf(existing?.ingredients?.joinToString("\n").orEmpty()) }
-    var steps by remember { mutableStateOf(existing?.steps?.joinToString("\n").orEmpty()) }
-    var cookTime by remember { mutableStateOf(existing?.cookTimeMinutes?.toString().orEmpty()) }
-    var category by remember { mutableStateOf(existing?.category ?: initialCategory) }
+    // When creating (existing == null), seed from the retained draft so a half-filled form comes
+    // back after leaving; a fresh draft falls back to the browsed category. When editing, prefill
+    // from the recipe and ignore the draft entirely.
+    val isEditing = existing != null
+    var title by remember { mutableStateOf(existing?.title ?: draft.title) }
+    var ingredients by
+        remember { mutableStateOf(existing?.ingredients?.joinToString("\n") ?: draft.ingredients) }
+    var steps by remember { mutableStateOf(existing?.steps?.joinToString("\n") ?: draft.steps) }
+    var cookTime by remember { mutableStateOf(existing?.cookTimeMinutes?.toString() ?: draft.cookTime) }
+    var category by
+        remember {
+            mutableStateOf(
+                when {
+                    isEditing -> existing?.category
+                    draft.isEmpty -> initialCategory
+                    else -> draft.category
+                },
+            )
+        }
+
+    // Persist create-mode edits into the retained draft so they survive navigating away and back.
+    if (!isEditing) {
+        LaunchedEffect(title, cookTime, ingredients, steps, category) {
+            onDraftChange(RecipeDraft(title, cookTime, ingredients, steps, category))
+        }
+    }
 
     // Whether Save has been pressed at least once. Errors stay hidden until then so the empty form
     // doesn't greet the user in red; after a failed attempt they surface and update live as fields fill.
