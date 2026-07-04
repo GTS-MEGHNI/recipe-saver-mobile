@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
@@ -68,14 +69,26 @@ fun AddRecipeScreen(
     var cookTime by remember { mutableStateOf(existing?.cookTimeMinutes?.toString().orEmpty()) }
     var category by remember { mutableStateOf(existing?.category ?: initialCategory) }
 
-    val canSave = title.isNotBlank()
+    // Whether Save has been pressed at least once. Errors stay hidden until then so the empty form
+    // doesn't greet the user in red; after a failed attempt they surface and update live as fields fill.
+    var attemptedSubmit by remember { mutableStateOf(false) }
+
+    // Mirror the API's required fields (title, ingredients, steps — see StoreRecipeRequest) so the
+    // user is told what's missing here, instead of getting a generic "Échec de l'enregistrement" 422.
+    val ingredientLines = ingredients.toLines()
+    val stepLines = steps.toLines()
+    val titleMissing = title.isBlank()
+    val ingredientsMissing = ingredientLines.isEmpty()
+    val stepsMissing = stepLines.isEmpty()
+    val isValid = !titleMissing && !ingredientsMissing && !stepsMissing
 
     val submit = {
-        if (canSave) {
+        attemptedSubmit = true
+        if (isValid) {
             onSave(
                 title.trim(),
-                ingredients.toLines(),
-                steps.toLines(),
+                ingredientLines,
+                stepLines,
                 cookTime.trim().toIntOrNull(),
                 category,
             )
@@ -102,7 +115,7 @@ fun AddRecipeScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = submit, enabled = canSave) {
+                    IconButton(onClick = submit) {
                         Icon(
                             imageVector = Icons.Filled.Check,
                             contentDescription = stringResource(R.string.content_description_save_recipe),
@@ -116,6 +129,7 @@ fun AddRecipeScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
+                .imePadding()
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 20.dp, vertical = 16.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp),
@@ -126,6 +140,13 @@ fun AddRecipeScreen(
                 label = { Text(stringResource(R.string.field_title)) },
                 placeholder = { Text(stringResource(R.string.hint_title)) },
                 singleLine = true,
+                isError = attemptedSubmit && titleMissing,
+                supportingText =
+                    if (attemptedSubmit && titleMissing) {
+                        { Text(stringResource(R.string.field_title_required)) }
+                    } else {
+                        null
+                    },
                 modifier = Modifier.fillMaxWidth(),
             )
 
@@ -150,6 +171,13 @@ fun AddRecipeScreen(
                 label = { Text(stringResource(R.string.field_ingredients)) },
                 placeholder = { Text(stringResource(R.string.hint_one_per_line)) },
                 minLines = 4,
+                isError = attemptedSubmit && ingredientsMissing,
+                supportingText =
+                    if (attemptedSubmit && ingredientsMissing) {
+                        { Text(stringResource(R.string.field_ingredients_required)) }
+                    } else {
+                        null
+                    },
                 modifier = Modifier.fillMaxWidth(),
             )
 
@@ -159,6 +187,13 @@ fun AddRecipeScreen(
                 label = { Text(stringResource(R.string.field_steps)) },
                 placeholder = { Text(stringResource(R.string.hint_one_per_line)) },
                 minLines = 5,
+                isError = attemptedSubmit && stepsMissing,
+                supportingText =
+                    if (attemptedSubmit && stepsMissing) {
+                        { Text(stringResource(R.string.field_steps_required)) }
+                    } else {
+                        null
+                    },
                 modifier = Modifier.fillMaxWidth(),
             )
         }
@@ -200,5 +235,5 @@ private fun CategorySelector(
 }
 
 /** Splits free-text field input into a list: one trimmed, non-blank line per item. */
-private fun String.toLines(): List<String> =
+internal fun String.toLines(): List<String> =
     lineSequence().map(String::trim).filter(String::isNotEmpty).toList()

@@ -1,6 +1,17 @@
 <resources>
     <string name="app_name">Mes Recettes</string>
 
+    <!-- Toasts: outcomes of API mutations -->
+    <string name="toast_recipe_saved">Recette enregistrée</string>
+    <string name="toast_recipe_deleted">Recette supprimée</string>
+    <string name="toast_image_added">Photo ajoutée</string>
+    <string name="toast_image_deleted">Photo supprimée</string>
+    <string name="toast_cover_updated">Photo de couverture mise à jour</string>
+    <string name="toast_save_failed">Échec de l\'enregistrement</string>
+    <string name="toast_delete_failed">Échec de la suppression</string>
+    <string name="toast_image_failed">Échec de l\'opération sur la photo</string>
+    <string name="toast_cover_failed">Échec de la mise à jour de la couverture</string>
+
     <string name="categories_title">Catégories</string>
     <string name="recipe_list_title">Mes recettes</string>
     <string name="recipe_list_empty">Aucune recette pour l\'instant</string>
@@ -10,7 +21,14 @@
     <string name="content_description_add_recipe">Ajouter une recette</string>
     <string name="content_description_back">Retour</string>
     <string name="content_description_delete_recipe">Supprimer la recette</string>
+    <string name="content_description_share_recipe">Partager la recette</string>
+    <string name="content_description_more_actions">Plus d\'actions</string>
     <string name="content_description_settings">Réglages</string>
+
+    <!-- Overflow menu items on the recipe detail screen -->
+    <string name="menu_share">Partager</string>
+    <string name="menu_set_cover">Changer la couverture</string>
+    <string name="menu_delete">Supprimer</string>
 
     <string name="settings_title">Réglages</string>
     <string name="settings_theme_section">Thème</string>
@@ -41,6 +59,8 @@
     <string name="hint_title">Nom de la recette</string>
     <string name="hint_cook_time">En minutes</string>
     <string name="field_title_required">Le titre est obligatoire</string>
+    <string name="field_ingredients_required">Ajoutez au moins un ingrédient</string>
+    <string name="field_steps_required">Ajoutez au moins une étape</string>
 
     <string name="label_cook_time_minutes">Temps de cuisson : %1$d min</string>
     <string name="label_cook_time_short">%1$d min</string>
@@ -73,4 +93,8 @@
     <string name="content_description_close">Fermer</string>
     <string name="label_photos_count">%1$d photos</string>
     <string name="label_photo_position">%1$d sur %2$d</string>
+
+    <!-- Sharing a recipe as plain text via the Android share sheet -->
+    <string name="share_recipe_chooser_title">Partager la recette</string>
+    <string name="share_recipe_cook_time">Temps de cuisson : %1$d min</string>
 </resources>

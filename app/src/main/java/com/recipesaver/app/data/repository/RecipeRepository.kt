@@ -14,17 +14,61 @@ import com.recipesaver.app.data.remote.dto.toDomain
  * ViewModel/UI, so the layers above stay unaware of how data is stored or fetched.
  *
  * Every method is a `suspend` call that hits the network; callers run them on a background
- * dispatcher (the ViewModel does, via `viewModelScope`).
+ * dispatcher (the ViewModel does, via `viewModelScope`). Modeled as an interface so the ViewModel
+ * can be unit-tested against a fake without any Android/network dependencies.
  */
-class RecipeRepository(
-    private val api: RecipeApiService,
-    private val imageUploader: ImageUploader,
-) {
-    suspend fun getAllRecipes(): List<Recipe> = api.listRecipes().data.map { it.toDomain() }
+interface RecipeRepository {
+    suspend fun getAllRecipes(): List<Recipe>
 
-    suspend fun getRecipe(id: Long): Recipe = api.getRecipe(id).data.toDomain()
+    suspend fun getRecipe(id: Long): Recipe
 
     suspend fun addRecipe(
+        title: String,
+        ingredients: List<String>,
+        steps: List<String>,
+        cookTimeMinutes: Int?,
+        category: RecipeCategory?,
+    ): Recipe
+
+    suspend fun updateRecipe(
+        id: Long,
+        title: String,
+        ingredients: List<String>,
+        steps: List<String>,
+        cookTimeMinutes: Int?,
+        category: RecipeCategory?,
+    ): Recipe
+
+    suspend fun deleteRecipe(id: Long)
+
+    suspend fun addImage(
+        recipeId: Long,
+        uri: Uri,
+    )
+
+    suspend fun deleteImage(
+        recipeId: Long,
+        imageId: Long,
+    )
+
+    suspend fun setCover(
+        recipeId: Long,
+        uri: Uri,
+    )
+
+    suspend fun deleteCover(recipeId: Long)
+}
+
+/** Live implementation talking to the owner-run API. */
+class DefaultRecipeRepository(
+    private val api: RecipeApiService,
+    private val imageUploader: ImageUploader,
+) : RecipeRepository {
+    override suspend fun getAllRecipes(): List<Recipe> = api.listRecipes().data.map { it.toDomain() }
+
+    override suspend fun getRecipe(id: Long): Recipe = api.getRecipe(id).data.toDomain()
+
+    override suspend fun addRecipe(
         title: String,
         ingredients: List<String>,
         steps: List<String>,
@@ -41,7 +85,7 @@ class RecipeRepository(
             ),
         ).data.toDomain()
 
-    suspend fun updateRecipe(
+    override suspend fun updateRecipe(
         id: Long,
         title: String,
         ingredients: List<String>,
@@ -60,12 +104,12 @@ class RecipeRepository(
             ),
         ).data.toDomain()
 
-    suspend fun deleteRecipe(id: Long) {
+    override suspend fun deleteRecipe(id: Long) {
         api.deleteRecipe(id)
     }
 
     /** Uploads [uri] into the recipe's gallery. No-op if the image can't be read. */
-    suspend fun addImage(
+    override suspend fun addImage(
         recipeId: Long,
         uri: Uri,
     ) {
@@ -73,7 +117,7 @@ class RecipeRepository(
         api.addImage(recipeId, part)
     }
 
-    suspend fun deleteImage(
+    override suspend fun deleteImage(
         recipeId: Long,
         imageId: Long,
     ) {
@@ -81,7 +125,7 @@ class RecipeRepository(
     }
 
     /** Sets or replaces the recipe's cover photo. No-op if the image can't be read. */
-    suspend fun setCover(
+    override suspend fun setCover(
         recipeId: Long,
         uri: Uri,
     ) {
@@ -89,7 +133,7 @@ class RecipeRepository(
         api.uploadCover(recipeId, part)
     }
 
-    suspend fun deleteCover(recipeId: Long) {
+    override suspend fun deleteCover(recipeId: Long) {
         api.deleteCover(recipeId)
     }
 }

@@ -1,6 +1,7 @@
 package com.recipesaver.app
 
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -12,6 +13,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -22,7 +24,7 @@ import com.recipesaver.app.data.local.entities.RecipeCategory
 import com.recipesaver.app.data.preferences.ThemePreferences
 import com.recipesaver.app.data.remote.ImageUploader
 import com.recipesaver.app.data.remote.NetworkModule
-import com.recipesaver.app.data.repository.RecipeRepository
+import com.recipesaver.app.data.repository.DefaultRecipeRepository
 import com.recipesaver.app.ui.components.labelRes
 import com.recipesaver.app.ui.screens.AddRecipeScreen
 import com.recipesaver.app.ui.screens.CategoryScreen
@@ -30,13 +32,14 @@ import com.recipesaver.app.ui.screens.RecipeDetailScreen
 import com.recipesaver.app.ui.screens.RecipeListScreen
 import com.recipesaver.app.ui.screens.SettingsScreen
 import com.recipesaver.app.ui.theme.RecipeSaverTheme
+import com.recipesaver.app.ui.viewmodel.RecipeMessage
 import com.recipesaver.app.ui.viewmodel.RecipeViewModel
 import com.recipesaver.app.ui.viewmodel.ThemeViewModel
 
 class MainActivity : ComponentActivity() {
     private val viewModel: RecipeViewModel by viewModels {
         RecipeViewModel.Factory(
-            RecipeRepository(
+            DefaultRecipeRepository(
                 NetworkModule.createApiService(),
                 ImageUploader(applicationContext),
             ),
@@ -66,6 +69,13 @@ private fun RecipeSaverApp(
     themeViewModel: ThemeViewModel,
 ) {
     val navController = rememberNavController()
+
+    val context = LocalContext.current
+    LaunchedEffect(viewModel) {
+        viewModel.messages.collect { message ->
+            Toast.makeText(context, context.getString(message.stringRes()), Toast.LENGTH_SHORT).show()
+        }
+    }
 
     NavHost(
         navController = navController,
@@ -113,8 +123,11 @@ private fun RecipeSaverApp(
             AddRecipeScreen(
                 initialCategory = initialCategory,
                 onSave = { title, ingredients, steps, cookTimeMinutes, category ->
-                    viewModel.addRecipe(title, ingredients, steps, cookTimeMinutes, category)
-                    navController.popBackStack()
+                    viewModel.addRecipe(title, ingredients, steps, cookTimeMinutes, category) { newId ->
+                        navController.navigate("detail/$newId") {
+                            popUpTo("add/{category}") { inclusive = true }
+                        }
+                    }
                 },
                 onBack = { navController.popBackStack() },
             )
@@ -137,11 +150,13 @@ private fun RecipeSaverApp(
             val recipeId = backStackEntry.arguments?.getLong("recipeId") ?: return@composable
             LaunchedEffect(recipeId) { viewModel.openRecipe(recipeId) }
             val recipe by viewModel.detail.collectAsState()
+            val uploadingCount by viewModel.pendingUploads.collectAsState()
 
             recipe?.let { loaded ->
                 RecipeDetailScreen(
                     recipe = loaded,
                     images = loaded.images,
+                    uploadingCount = uploadingCount,
                     onAddImages = { uris -> viewModel.addImages(recipeId, uris) },
                     onDeleteImage = { image -> viewModel.deleteImage(image.recipeId, image.id) },
                     onSetCover = { uri -> viewModel.setCover(recipeId, uri) },
@@ -176,3 +191,17 @@ private fun RecipeSaverApp(
         }
     }
 }
+
+/** Maps a mutation outcome to its localized toast text. */
+private fun RecipeMessage.stringRes(): Int =
+    when (this) {
+        RecipeMessage.RecipeSaved -> R.string.toast_recipe_saved
+        RecipeMessage.RecipeDeleted -> R.string.toast_recipe_deleted
+        RecipeMessage.ImageAdded -> R.string.toast_image_added
+        RecipeMessage.ImageDeleted -> R.string.toast_image_deleted
+        RecipeMessage.CoverUpdated -> R.string.toast_cover_updated
+        RecipeMessage.SaveFailed -> R.string.toast_save_failed
+        RecipeMessage.DeleteFailed -> R.string.toast_delete_failed
+        RecipeMessage.ImageFailed -> R.string.toast_image_failed
+        RecipeMessage.CoverFailed -> R.string.toast_cover_failed
+    }

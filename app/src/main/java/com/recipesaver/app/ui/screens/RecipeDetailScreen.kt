@@ -33,8 +33,13 @@ import androidx.compose.material.icons.filled.AddAPhoto
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -60,12 +65,15 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import coil3.compose.AsyncImage
+import coil3.compose.SubcomposeAsyncImage
 import com.recipesaver.app.R
 import com.recipesaver.app.data.local.entities.Recipe
 import com.recipesaver.app.data.local.entities.RecipeImage
 import com.recipesaver.app.ui.components.RecipeImagePlaceholder
+import com.recipesaver.app.ui.components.ShimmerBox
 import com.recipesaver.app.ui.components.icon
 import com.recipesaver.app.ui.components.labelRes
+import com.recipesaver.app.ui.share.shareRecipeAsText
 
 // Corner radius of the content sheet that rises over the bottom of the hero photo.
 private val SheetCornerRadius = 28.dp
@@ -89,11 +97,16 @@ fun RecipeDetailScreen(
     onDelete: () -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
+    uploadingCount: Int = 0,
 ) {
     // Index of the photo shown full-screen, or null when the viewer is closed.
     var viewerIndex by remember { mutableStateOf<Int?>(null) }
     // Whether the delete-confirmation dialog is showing.
     var showDeleteDialog by remember { mutableStateOf(false) }
+    // Whether the overflow (three-dot) menu of secondary actions is open.
+    var showMenu by remember { mutableStateOf(false) }
+
+    val context = LocalContext.current
 
     val pickImages =
         rememberLauncherForActivityResult(
@@ -150,6 +163,7 @@ fun RecipeDetailScreen(
             item(key = "gallery") {
                 GalleryRow(
                     images = images,
+                    uploadingCount = uploadingCount,
                     onAddClick = launchPicker,
                     onImageClick = { index -> viewerIndex = index },
                 )
@@ -200,21 +214,63 @@ fun RecipeDetailScreen(
                 onClick = onBack,
             )
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                // Edit stays visible as the one primary action; the rest live in the overflow menu.
                 ScrimIconButton(
                     icon = Icons.Filled.Edit,
                     contentDescription = stringResource(R.string.content_description_edit_recipe),
                     onClick = onEdit,
                 )
-                ScrimIconButton(
-                    icon = Icons.Filled.AddAPhoto,
-                    contentDescription = stringResource(R.string.content_description_set_cover),
-                    onClick = launchCoverPicker,
-                )
-                ScrimIconButton(
-                    icon = Icons.Filled.Delete,
-                    contentDescription = stringResource(R.string.content_description_delete_recipe),
-                    onClick = { showDeleteDialog = true },
-                )
+                Box {
+                    ScrimIconButton(
+                        icon = Icons.Filled.MoreVert,
+                        contentDescription = stringResource(R.string.content_description_more_actions),
+                        onClick = { showMenu = true },
+                    )
+                    DropdownMenu(
+                        expanded = showMenu,
+                        onDismissRequest = { showMenu = false },
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.menu_share)) },
+                            leadingIcon = {
+                                Icon(Icons.Filled.Share, contentDescription = null)
+                            },
+                            onClick = {
+                                showMenu = false
+                                shareRecipeAsText(context, recipe)
+                            },
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.menu_set_cover)) },
+                            leadingIcon = {
+                                Icon(Icons.Filled.AddAPhoto, contentDescription = null)
+                            },
+                            onClick = {
+                                showMenu = false
+                                launchCoverPicker()
+                            },
+                        )
+                        DropdownMenuItem(
+                            text = {
+                                Text(
+                                    text = stringResource(R.string.menu_delete),
+                                    color = MaterialTheme.colorScheme.error,
+                                )
+                            },
+                            leadingIcon = {
+                                Icon(
+                                    Icons.Filled.Delete,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.error,
+                                )
+                            },
+                            onClick = {
+                                showMenu = false
+                                showDeleteDialog = true
+                            },
+                        )
+                    }
+                }
             }
         }
     }
@@ -362,6 +418,7 @@ private fun GalleryRow(
     onAddClick: () -> Unit,
     onImageClick: (Int) -> Unit,
     modifier: Modifier = Modifier,
+    uploadingCount: Int = 0,
 ) {
     LazyRow(
         modifier = modifier
@@ -380,6 +437,14 @@ private fun GalleryRow(
             GalleryThumbnail(
                 image = image,
                 onClick = { onImageClick(index) },
+            )
+        }
+        // Skeleton tiles for photos still uploading (they don't exist server-side yet).
+        items(uploadingCount, key = { "uploading_$it" }) {
+            ShimmerBox(
+                modifier = Modifier
+                    .size(104.dp)
+                    .clip(RoundedCornerShape(16.dp)),
             )
         }
     }
@@ -418,10 +483,11 @@ private fun GalleryThumbnail(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    AsyncImage(
+    SubcomposeAsyncImage(
         model = image.filePath,
         contentDescription = null,
         contentScale = ContentScale.Crop,
+        loading = { ShimmerBox() },
         modifier = modifier
             .size(104.dp)
             .clip(RoundedCornerShape(16.dp))
@@ -612,10 +678,18 @@ private fun FullScreenGallery(
                 state = pagerState,
                 modifier = Modifier.fillMaxSize(),
             ) { page ->
-                AsyncImage(
+                SubcomposeAsyncImage(
                     model = images[page].filePath,
                     contentDescription = null,
                     contentScale = ContentScale.Fit,
+                    loading = {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            CircularProgressIndicator(color = Color.White)
+                        }
+                    },
                     modifier = Modifier.fillMaxSize(),
                 )
             }
