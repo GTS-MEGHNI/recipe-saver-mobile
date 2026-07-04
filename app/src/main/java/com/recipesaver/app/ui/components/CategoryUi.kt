@@ -4,6 +4,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BakeryDining
 import androidx.compose.material.icons.filled.BreakfastDining
 import androidx.compose.material.icons.filled.Cake
+import androidx.compose.material.icons.filled.EggAlt
 import androidx.compose.material.icons.filled.Icecream
 import androidx.compose.material.icons.filled.LocalDrink
 import androidx.compose.material.icons.filled.Restaurant
@@ -17,6 +18,7 @@ val RecipeCategory.labelRes: Int
         when (this) {
             RecipeCategory.DRINKS -> R.string.category_drinks
             RecipeCategory.FOOD -> R.string.category_food
+            RecipeCategory.QUICHE -> R.string.category_quiche
             RecipeCategory.PASTRY -> R.string.category_pastry
             RecipeCategory.VERRINE -> R.string.category_verrine
             RecipeCategory.CAKE -> R.string.category_cake
@@ -33,6 +35,7 @@ val RecipeCategory.coverDrawableName: String
         when (this) {
             RecipeCategory.DRINKS -> "category_drink"
             RecipeCategory.FOOD -> "category_food"
+            RecipeCategory.QUICHE -> "category_quiche"
             RecipeCategory.PASTRY -> "category_pastry"
             RecipeCategory.VERRINE -> "category_verrine"
             RecipeCategory.CAKE -> "category_cake"
@@ -45,6 +48,7 @@ val RecipeCategory.icon: ImageVector
         when (this) {
             RecipeCategory.DRINKS -> Icons.Filled.LocalDrink
             RecipeCategory.FOOD -> Icons.Filled.Restaurant
+            RecipeCategory.QUICHE -> Icons.Filled.EggAlt
             RecipeCategory.PASTRY -> Icons.Filled.BakeryDining
             RecipeCategory.VERRINE -> Icons.Filled.Icecream
             RecipeCategory.CAKE -> Icons.Filled.Cake

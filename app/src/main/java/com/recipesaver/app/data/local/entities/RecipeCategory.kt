@@ -6,4 +6,4 @@ package com.recipesaver.app.data.local.entities
  * `category` — no schema migration is needed. French labels and icons live in the UI layer so this
  * stays a plain domain type.
  */
-enum class RecipeCategory { DRINKS, FOOD, PASTRY, VERRINE, CAKE, CONFITURE }
+enum class RecipeCategory { DRINKS, FOOD, QUICHE, PASTRY, VERRINE, CAKE, CONFITURE }

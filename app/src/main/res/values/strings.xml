@@ -88,6 +88,7 @@
 
     <string name="category_drinks">Boisson</string>
     <string name="category_food">Plat</string>
+    <string name="category_quiche">Quiche</string>
     <string name="category_pastry">Pâtisserie</string>
     <string name="category_verrine">Verrine</string>
     <string name="category_cake">Gâteau</string>
