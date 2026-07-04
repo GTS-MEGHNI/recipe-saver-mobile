@@ -10,6 +10,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
@@ -41,6 +42,7 @@ fun RecipeListScreen(
     recipes: List<Recipe>,
     onRecipeClick: (Long) -> Unit,
     onToggleFavorite: (Recipe) -> Unit,
+    onSearchClick: () -> Unit,
     onSettingsClick: () -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
@@ -61,6 +63,12 @@ fun RecipeListScreen(
                     }
                 },
                 actions = {
+                    IconButton(onClick = onSearchClick) {
+                        Icon(
+                            imageVector = Icons.Filled.Search,
+                            contentDescription = stringResource(R.string.content_description_search),
+                        )
+                    }
                     IconButton(onClick = onSettingsClick) {
                         Icon(
                             imageVector = Icons.Filled.Settings,
