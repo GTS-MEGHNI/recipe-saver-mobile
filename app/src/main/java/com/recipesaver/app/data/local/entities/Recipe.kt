@@ -12,6 +12,7 @@ data class Recipe(
     val steps: List<String>,
     val cookTimeMinutes: Int? = null,
     val category: RecipeCategory? = null,
+    val isFavorite: Boolean = false,
     /** Coil-loadable URL for the cover photo, or null to render the monogram fallback. */
     val coverImageUri: String? = null,
     /** The recipe's gallery photos, ordered by position. Empty when none. */

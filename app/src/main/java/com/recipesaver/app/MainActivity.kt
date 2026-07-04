@@ -30,6 +30,7 @@ import com.recipesaver.app.ui.screens.AddRecipeScreen
 import com.recipesaver.app.ui.screens.CategoryScreen
 import com.recipesaver.app.ui.screens.RecipeDetailScreen
 import com.recipesaver.app.ui.screens.RecipeListScreen
+import com.recipesaver.app.ui.screens.SearchScreen
 import com.recipesaver.app.ui.screens.SettingsScreen
 import com.recipesaver.app.ui.theme.RecipeSaverTheme
 import com.recipesaver.app.ui.viewmodel.RecipeMessage
@@ -87,9 +88,13 @@ private fun RecipeSaverApp(
             val counts = remember(recipes) {
                 recipes.mapNotNull { it.category }.groupingBy { it }.eachCount()
             }
+            val favoriteCount = remember(recipes) { recipes.count { it.isFavorite } }
             CategoryScreen(
                 recipeCounts = counts,
+                favoriteCount = favoriteCount,
                 onCategoryClick = { category -> navController.navigate("list/${category.name}") },
+                onFavoritesClick = { navController.navigate("favorites") },
+                onSearchClick = { navController.navigate("search") },
                 onSettingsClick = { navController.navigate("settings") },
             )
         }
@@ -107,8 +112,31 @@ private fun RecipeSaverApp(
                 title = stringResource(category.labelRes),
                 recipes = filtered,
                 onRecipeClick = { id -> navController.navigate("detail/$id") },
+                onToggleFavorite = viewModel::toggleFavorite,
                 onAddClick = { navController.navigate("add/${category.name}") },
                 onSettingsClick = { navController.navigate("settings") },
+                onBack = { navController.popBackStack() },
+            )
+        }
+        composable("favorites") {
+            val recipes by viewModel.recipes.collectAsState()
+            val favorites = remember(recipes) { recipes.filter { it.isFavorite } }
+            RecipeListScreen(
+                title = stringResource(R.string.favorites_title),
+                recipes = favorites,
+                onRecipeClick = { id -> navController.navigate("detail/$id") },
+                onToggleFavorite = viewModel::toggleFavorite,
+                onSettingsClick = { navController.navigate("settings") },
+                onBack = { navController.popBackStack() },
+                emptyMessage = stringResource(R.string.favorites_empty),
+            )
+        }
+        composable("search") {
+            val recipes by viewModel.recipes.collectAsState()
+            SearchScreen(
+                recipes = recipes,
+                onRecipeClick = { id -> navController.navigate("detail/$id") },
+                onToggleFavorite = viewModel::toggleFavorite,
                 onBack = { navController.popBackStack() },
             )
         }
@@ -160,6 +188,7 @@ private fun RecipeSaverApp(
                     onAddImages = { uris -> viewModel.addImages(recipeId, uris) },
                     onDeleteImage = { image -> viewModel.deleteImage(image.recipeId, image.id) },
                     onSetCover = { uri -> viewModel.setCover(recipeId, uri) },
+                    onToggleFavorite = { viewModel.toggleFavorite(loaded) },
                     onEdit = { navController.navigate("edit/$recipeId") },
                     onDelete = {
                         viewModel.deleteRecipe(loaded)

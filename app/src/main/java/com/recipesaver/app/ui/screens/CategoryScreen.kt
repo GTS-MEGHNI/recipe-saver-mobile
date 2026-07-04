@@ -15,6 +15,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -52,7 +54,10 @@ import com.recipesaver.app.ui.components.labelRes
 @Composable
 fun CategoryScreen(
     recipeCounts: Map<RecipeCategory, Int>,
+    favoriteCount: Int,
     onCategoryClick: (RecipeCategory) -> Unit,
+    onFavoritesClick: () -> Unit,
+    onSearchClick: () -> Unit,
     onSettingsClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -62,6 +67,12 @@ fun CategoryScreen(
             TopAppBar(
                 title = { Text(stringResource(R.string.categories_title)) },
                 actions = {
+                    IconButton(onClick = onSearchClick) {
+                        Icon(
+                            imageVector = Icons.Filled.Search,
+                            contentDescription = stringResource(R.string.content_description_search),
+                        )
+                    }
                     IconButton(onClick = onSettingsClick) {
                         Icon(
                             imageVector = Icons.Filled.Settings,
@@ -79,11 +90,62 @@ fun CategoryScreen(
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
+            if (favoriteCount > 0) {
+                item(key = "favorites") {
+                    FavoritesCard(count = favoriteCount, onClick = onFavoritesClick)
+                }
+            }
             items(RecipeCategory.entries, key = { it.name }) { category ->
                 CategoryCard(
                     category = category,
                     recipeCount = recipeCounts[category] ?: 0,
                     onClick = { onCategoryClick(category) },
+                )
+            }
+        }
+    }
+}
+
+/**
+ * Entry card for the cross-category favorites collection, shown above the category cards whenever at
+ * least one recipe is starred. Uses a solid tinted surface with a heart, so it reads as distinct
+ * from the photo-backed category cards.
+ */
+@Composable
+private fun FavoritesCard(
+    count: Int,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Card(
+        onClick = onClick,
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(MaterialTheme.colorScheme.primaryContainer)
+                .padding(20.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            Icon(
+                imageVector = Icons.Filled.Favorite,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(28.dp),
+            )
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(
+                    text = stringResource(R.string.favorites_title),
+                    style = MaterialTheme.typography.titleLarge,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                )
+                Text(
+                    text = pluralStringResource(R.plurals.label_recipe_count, count, count),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
                 )
             }
         }

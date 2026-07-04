@@ -33,6 +33,7 @@ fun RecipeDto.toDomain(): Recipe =
         steps = steps,
         cookTimeMinutes = cookTimeMinutes,
         category = category?.let { name -> runCatching { RecipeCategory.valueOf(name) }.getOrNull() },
+        isFavorite = isFavorite,
         coverImageUri = normalizeImageUrl(coverImageUrl),
         images = images.map { it.toDomain(id) },
         createdAt = createdAt,

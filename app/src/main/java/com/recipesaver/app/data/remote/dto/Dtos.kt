@@ -20,6 +20,7 @@ data class RecipeDto(
     val steps: List<String> = emptyList(),
     val cookTimeMinutes: Int? = null,
     val category: String? = null,
+    val isFavorite: Boolean = false,
     val coverImageUrl: String? = null,
     val images: List<RecipeImageDto> = emptyList(),
     val createdAt: Long = 0,
@@ -44,4 +45,7 @@ data class RecipeRequestDto(
     val steps: List<String>,
     val cookTimeMinutes: Int? = null,
     val category: String? = null,
+    // Only sent on an explicit favorite toggle; null (the default) is dropped by the serializer
+    // (`explicitNulls = false`), so a plain create/edit never overwrites the server's favorite state.
+    val isFavorite: Boolean? = null,
 )

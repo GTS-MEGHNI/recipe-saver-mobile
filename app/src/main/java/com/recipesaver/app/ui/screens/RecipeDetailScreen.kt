@@ -33,9 +33,13 @@ import androidx.compose.material.icons.filled.AddAPhoto
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
@@ -46,9 +50,11 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -58,6 +64,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -74,6 +81,9 @@ import com.recipesaver.app.ui.components.ShimmerBox
 import com.recipesaver.app.ui.components.icon
 import com.recipesaver.app.ui.components.labelRes
 import com.recipesaver.app.ui.share.shareRecipeAsText
+import com.recipesaver.app.ui.share.shareRecipeWithPhoto
+import com.recipesaver.app.ui.share.shareShoppingList
+import kotlinx.coroutines.launch
 
 // Corner radius of the content sheet that rises over the bottom of the hero photo.
 private val SheetCornerRadius = 28.dp
@@ -93,12 +103,15 @@ fun RecipeDetailScreen(
     onAddImages: (List<Uri>) -> Unit,
     onDeleteImage: (RecipeImage) -> Unit,
     onSetCover: (Uri) -> Unit,
+    onToggleFavorite: () -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
     uploadingCount: Int = 0,
 ) {
+    KeepScreenOn()
+
     // Index of the photo shown full-screen, or null when the viewer is closed.
     var viewerIndex by remember { mutableStateOf<Int?>(null) }
     // Whether the delete-confirmation dialog is showing.
@@ -107,6 +120,7 @@ fun RecipeDetailScreen(
     var showMenu by remember { mutableStateOf(false) }
 
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
 
     val pickImages =
         rememberLauncherForActivityResult(
@@ -214,7 +228,25 @@ fun RecipeDetailScreen(
                 onClick = onBack,
             )
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                // Edit stays visible as the one primary action; the rest live in the overflow menu.
+                // Favorite and edit stay visible as primary actions; the rest live in the overflow menu.
+                ScrimIconButton(
+                    icon =
+                        if (recipe.isFavorite) {
+                            Icons.Filled.Favorite
+                        } else {
+                            Icons.Filled.FavoriteBorder
+                        },
+                    contentDescription =
+                        stringResource(
+                            if (recipe.isFavorite) {
+                                R.string.content_description_unfavorite
+                            } else {
+                                R.string.content_description_favorite
+                            },
+                        ),
+                    tint = if (recipe.isFavorite) MaterialTheme.colorScheme.primary else Color.White,
+                    onClick = onToggleFavorite,
+                )
                 ScrimIconButton(
                     icon = Icons.Filled.Edit,
                     contentDescription = stringResource(R.string.content_description_edit_recipe),
@@ -238,6 +270,28 @@ fun RecipeDetailScreen(
                             onClick = {
                                 showMenu = false
                                 shareRecipeAsText(context, recipe)
+                            },
+                        )
+                        if (recipe.coverImageUri != null) {
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.menu_share_with_photo)) },
+                                leadingIcon = {
+                                    Icon(Icons.Filled.Image, contentDescription = null)
+                                },
+                                onClick = {
+                                    showMenu = false
+                                    scope.launch { shareRecipeWithPhoto(context, recipe) }
+                                },
+                            )
+                        }
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.menu_shopping_list)) },
+                            leadingIcon = {
+                                Icon(Icons.Filled.ShoppingCart, contentDescription = null)
+                            },
+                            onClick = {
+                                showMenu = false
+                                shareShoppingList(context, recipe)
                             },
                         )
                         DropdownMenuItem(
@@ -315,6 +369,20 @@ fun RecipeDetailScreen(
             },
             onClose = { viewerIndex = null },
         )
+    }
+}
+
+/**
+ * Keeps the screen awake while the recipe is open, so the phone doesn't dim or lock mid-cook while
+ * the user follows the steps with messy hands. The flag is cleared automatically when this leaves
+ * the composition (navigating away).
+ */
+@Composable
+private fun KeepScreenOn() {
+    val view = LocalView.current
+    DisposableEffect(view) {
+        view.keepScreenOn = true
+        onDispose { view.keepScreenOn = false }
     }
 }
 
@@ -636,6 +704,7 @@ private fun ScrimIconButton(
     contentDescription: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    tint: Color = Color.White,
 ) {
     Surface(
         onClick = onClick,
@@ -647,7 +716,7 @@ private fun ScrimIconButton(
             Icon(
                 imageVector = icon,
                 contentDescription = contentDescription,
-                tint = Color.White,
+                tint = tint,
             )
         }
     }

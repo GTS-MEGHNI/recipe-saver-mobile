@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <!-- The cache subdirectory where a recipe cover is downloaded before being shared as a photo. -->
+    <cache-path
+        name="shared_images"
+        path="shared_images/" />
+</paths>

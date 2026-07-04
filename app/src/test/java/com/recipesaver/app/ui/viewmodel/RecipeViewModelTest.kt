@@ -95,6 +95,41 @@ class RecipeViewModelTest {
             job.cancel()
         }
 
+    @Test
+    fun `toggleFavorite flips the cached recipe`() =
+        runTest(dispatcher) {
+            val repo = FakeRepository(createdRecipe = recipe(7), existing = listOf(recipe(7)))
+            val viewModel = RecipeViewModel(repo)
+            advanceUntilIdle() // let init refresh populate the cache
+
+            viewModel.toggleFavorite(recipe(7))
+            advanceUntilIdle()
+
+            assertTrue(viewModel.recipes.value.single { it.id == 7L }.isFavorite)
+        }
+
+    @Test
+    fun `toggleFavorite reverts and reports failure when the call fails`() =
+        runTest(dispatcher) {
+            val repo =
+                FakeRepository(
+                    createdRecipe = recipe(7),
+                    existing = listOf(recipe(7)),
+                    failMutations = true,
+                )
+            val viewModel = RecipeViewModel(repo)
+            val messages = mutableListOf<RecipeMessage>()
+            val job = launch { viewModel.messages.toList(messages) }
+            advanceUntilIdle()
+
+            viewModel.toggleFavorite(recipe(7))
+            advanceUntilIdle()
+
+            assertFalse(viewModel.recipes.value.single { it.id == 7L }.isFavorite)
+            assertTrue(messages.contains(RecipeMessage.SaveFailed))
+            job.cancel()
+        }
+
     /** Minimal in-memory fake; only the methods exercised here do anything meaningful. */
     private class FakeRepository(
         private val createdRecipe: Recipe,
@@ -130,6 +165,14 @@ class RecipeViewModelTest {
 
         override suspend fun deleteRecipe(id: Long) {
             if (failMutations) throw RuntimeException("boom")
+        }
+
+        override suspend fun setFavorite(
+            recipe: Recipe,
+            favorite: Boolean,
+        ): Recipe {
+            if (failMutations) throw RuntimeException("boom")
+            return recipe.copy(isFavorite = favorite)
         }
 
         override suspend fun addImage(

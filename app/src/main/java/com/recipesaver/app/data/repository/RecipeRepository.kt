@@ -41,6 +41,12 @@ interface RecipeRepository {
 
     suspend fun deleteRecipe(id: Long)
 
+    /** Flips a recipe's favorite flag on the server and returns the updated recipe. */
+    suspend fun setFavorite(
+        recipe: Recipe,
+        favorite: Boolean,
+    ): Recipe
+
     suspend fun addImage(
         recipeId: Long,
         uri: Uri,
@@ -107,6 +113,27 @@ class DefaultRecipeRepository(
     override suspend fun deleteRecipe(id: Long) {
         api.deleteRecipe(id)
     }
+
+    /**
+     * Persists a favorite toggle. Sends the recipe's current fields alongside the new [favorite]
+     * flag (the API updates via a full recipe body); the server only touches `is_favorite` because
+     * the other fields are unchanged.
+     */
+    override suspend fun setFavorite(
+        recipe: Recipe,
+        favorite: Boolean,
+    ): Recipe =
+        api.updateRecipe(
+            recipe.id,
+            RecipeRequestDto(
+                title = recipe.title,
+                ingredients = recipe.ingredients,
+                steps = recipe.steps,
+                cookTimeMinutes = recipe.cookTimeMinutes,
+                category = recipe.category?.name,
+                isFavorite = favorite,
+            ),
+        ).data.toDomain()
 
     /** Uploads [uri] into the recipe's gallery. No-op if the image can't be read. */
     override suspend fun addImage(

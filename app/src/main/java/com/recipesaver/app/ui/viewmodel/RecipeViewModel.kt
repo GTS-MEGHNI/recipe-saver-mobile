@@ -170,6 +170,31 @@ class RecipeViewModel(
         }
     }
 
+    /**
+     * Toggles [recipe]'s favorite flag. Flips the cached state immediately so the heart responds
+     * instantly, then persists it; a network failure reverts the flip and surfaces an error toast.
+     */
+    fun toggleFavorite(recipe: Recipe) {
+        val target = !recipe.isFavorite
+        applyFavorite(recipe.id, target)
+        viewModelScope.launch {
+            runCatching { repository.setFavorite(recipe, target) }
+                .onFailure {
+                    applyFavorite(recipe.id, recipe.isFavorite)
+                    fail(it, RecipeMessage.SaveFailed)
+                }
+        }
+    }
+
+    /** Sets the favorite flag on the cached list and open recipe without a network round-trip. */
+    private fun applyFavorite(
+        id: Long,
+        favorite: Boolean,
+    ) {
+        _recipes.value = _recipes.value.map { if (it.id == id) it.copy(isFavorite = favorite) else it }
+        _detail.value = _detail.value?.let { if (it.id == id) it.copy(isFavorite = favorite) else it }
+    }
+
     fun deleteRecipe(recipe: Recipe) {
         viewModelScope.launch {
             runCatching { repository.deleteRecipe(recipe.id) }

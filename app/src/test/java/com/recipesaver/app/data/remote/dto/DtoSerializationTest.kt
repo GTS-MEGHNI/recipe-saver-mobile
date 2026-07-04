@@ -78,6 +78,30 @@ class DtoSerializationTest {
     }
 
     @Test
+    fun `decodes isFavorite and defaults it to false when absent`() {
+        val favorite =
+            json.decodeFromString<ApiData<RecipeDto>>(
+                """{"data":{"id":1,"title":"X","isFavorite":true}}""",
+            ).data
+        val plain = json.decodeFromString<ApiData<RecipeDto>>("""{"data":{"id":2,"title":"Y"}}""").data
+
+        assertTrue(favorite.isFavorite)
+        assertFalse(plain.isFavorite)
+    }
+
+    @Test
+    fun `request body carries isFavorite only when set`() {
+        fun body(favorite: Boolean?) =
+            json.encodeToString(
+                RecipeRequestDto.serializer(),
+                RecipeRequestDto("C", listOf("f"), listOf("m"), isFavorite = favorite),
+            )
+
+        assertFalse(body(null).contains("isFavorite"))
+        assertTrue(body(true).contains("\"isFavorite\":true"))
+    }
+
+    @Test
     fun `request body omits null optional fields`() {
         val out =
             json.encodeToString(

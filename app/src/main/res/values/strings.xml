@@ -24,11 +24,31 @@
     <string name="content_description_share_recipe">Partager la recette</string>
     <string name="content_description_more_actions">Plus d\'actions</string>
     <string name="content_description_settings">Réglages</string>
+    <string name="content_description_search">Rechercher</string>
+    <string name="content_description_favorite">Ajouter aux favoris</string>
+    <string name="content_description_unfavorite">Retirer des favoris</string>
 
     <!-- Overflow menu items on the recipe detail screen -->
     <string name="menu_share">Partager</string>
+    <string name="menu_share_with_photo">Partager avec la photo</string>
+    <string name="menu_shopping_list">Liste de courses</string>
     <string name="menu_set_cover">Changer la couverture</string>
     <string name="menu_delete">Supprimer</string>
+
+    <!-- Favorites -->
+    <string name="favorites_title">Favoris</string>
+    <string name="favorites_empty">Aucune recette en favori</string>
+
+    <!-- Search -->
+    <string name="search_title">Rechercher</string>
+    <string name="search_hint">Nom de recette ou ingrédient</string>
+    <string name="search_prompt">Tapez pour rechercher une recette</string>
+    <string name="search_empty">Aucune recette trouvée</string>
+    <string name="search_clear">Effacer</string>
+
+    <!-- Sharing a shopping list (ingredients only) -->
+    <string name="shopping_list_subject">Liste de courses : %1$s</string>
+    <string name="shopping_list_heading">Liste de courses pour %1$s</string>
 
     <string name="settings_title">Réglages</string>
     <string name="settings_theme_section">Thème</string>
